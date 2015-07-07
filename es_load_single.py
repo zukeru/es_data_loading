@@ -883,19 +883,6 @@ replicas = args.replicas
 index = args.index
 
 conn = boto.ec2.connect_to_region('us-west-2',aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-
-if not shards:
-    shards = '120'
-if not replicas:
-    replicas = '0'
-if not wos_data:
-    wos_data = 'wos_1'
-if not es_host_name:
-    es_host_name = ''
-if not threads:
-    threads = '10'
-if not index:
-    index = 'wos1'
     
 #download the loading data.    
 directory = download_s3(wos_data, 'tr-ips-ses-data',access_key, secret_key)
