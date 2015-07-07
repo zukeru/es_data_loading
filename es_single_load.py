@@ -886,6 +886,7 @@ replicas = args.replicas
 index = args.index
 
 
+print 'Passed wos_data',wos_data
 
 conn = boto.ec2.connect_to_region('us-west-2',aws_access_key_id=access_key, aws_secret_access_key=secret_key)
 
@@ -897,6 +898,8 @@ directory_uploadfiles = download_s3_files('1pelasticsearch-data', access_key, se
 load_syn_files(es_host_name, directory_uploadfiles)
 
 make_mapping(shards, replicas)
+
+
 
 directory = directory[1] + '/' + 'json_data/wos/current/' + wos_data
 
