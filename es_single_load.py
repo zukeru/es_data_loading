@@ -23,10 +23,11 @@ def download_s3(wos,bucket, access_key, secret_key):
         keyString = str(l.key)
         d = LOCAL_PATH + '/' + keyString
         if str(wos) in str(d):
-            print 'Downloading: %s' % d
+            
             if str(wos) == 'wos_1' and 'wos_10' in str(d):
                 continue
             try:
+                print 'Downloading: %s' % d
                 l.get_contents_to_filename(d)
             except OSError:
                 if not os.path.exists(d):
