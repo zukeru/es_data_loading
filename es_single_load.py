@@ -22,6 +22,7 @@ def download_s3(wos,bucket, access_key, secret_key):
     for l in bucket_list:
         keyString = str(l.key)
         d = LOCAL_PATH + '/' + keyString
+        print 'debugging:', wos, d, keyString, LOCAL_PATH, l
         if str(wos) in str(d):
             
             if str(wos) == 'wos_1' and 'wos_10' in str(d):
@@ -885,9 +886,7 @@ shards = args.shards
 replicas = args.replicas
 index = args.index
 
-
-print 'Passed wos_data',wos_data
-
+print 'passed wos info:',wos_data
 conn = boto.ec2.connect_to_region('us-west-2',aws_access_key_id=access_key, aws_secret_access_key=secret_key)
 
 #download the loading data.    
@@ -898,8 +897,6 @@ directory_uploadfiles = download_s3_files('1pelasticsearch-data', access_key, se
 load_syn_files(es_host_name, directory_uploadfiles)
 
 make_mapping(shards, replicas)
-
-
 
 directory = directory[1] + '/' + 'json_data/wos/current/' + wos_data
 
