@@ -25,7 +25,7 @@ def download_s3(wos,bucket, access_key, secret_key):
         if str(wos) in str(d):
             print 'Downloading: %s' % d
             if str(wos) == 'wos_1' and 'wos_10' in str(d):
-                break
+                continue
             try:
                 l.get_contents_to_filename(d)
             except OSError:
@@ -883,6 +883,8 @@ threads = args.threads
 shards = args.shards
 replicas = args.replicas
 index = args.index
+
+
 
 conn = boto.ec2.connect_to_region('us-west-2',aws_access_key_id=access_key, aws_secret_access_key=secret_key)
 
