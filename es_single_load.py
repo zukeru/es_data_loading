@@ -22,10 +22,9 @@ def download_s3(wos,bucket, access_key, secret_key):
     for l in bucket_list:
         keyString = str(l.key)
         d = LOCAL_PATH + '/' + keyString
-        print 'debugging:', wos, d, keyString, LOCAL_PATH, l
-        if str(wos) in str(d):
-            
-            if str(wos) == 'wos_1' and 'wos_10' in str(d):
+        search_string = '/' + wos + '/'
+        if search_string in str(l):
+            if str(wos) == 'wos_1' and '/wos_10/' in str(l):
                 continue
             try:
                 print 'Downloading: %s' % d
