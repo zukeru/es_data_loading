@@ -1109,7 +1109,7 @@ command = ("python %s --data %s --host %s --index %s --type %s --mapping %s --th
 shell_command_execute(command)
 print command
 print 'finished'
-remove_shit = 'sudo rm -rf ./*'
-shell_command_execute(remove_shit)
+#remove_shit = 'sudo rm -rf ./*'
+#shell_command_execute(remove_shit)
 conn.close()
 
