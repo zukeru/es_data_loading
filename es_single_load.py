@@ -1105,8 +1105,9 @@ set_settings('ins', es_host_name)
 location = os.path.dirname(os.path.realpath(__file__)) + '/load-es.py'
 mapping = os.path.dirname(os.path.realpath(__file__)) + '/wos.mapping'
 type = 'wos'
-command = ("cd /mnt/wosdata/load-es/;python %s --data %s --host %s --index %s --type %s --mapping %s --threads %s" % (location, directory, es_host_name, index, type, mapping, threads ))
+command = ("python %s --data %s --host %s --index %s --type %s --mapping %s --threads %s" % (location, directory, es_host_name, index, type, mapping, threads ))
 shell_command_execute(command)
+print command
 print 'finished'
 remove_shit = 'sudo rm -rf ./*'
 shell_command_execute(remove_shit)
