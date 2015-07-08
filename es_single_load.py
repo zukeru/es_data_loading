@@ -6,23 +6,36 @@ import random
 import multiprocessing
 import time
 import os
+from datetime import datetime
 
 #folder argument for s3 which folder to get data from
 #bucket argument
 
 def shell_command_execute(command):
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    print 'Executing Command',command
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=False)
     (output, err) = p.communicate()
     return output
 
 def spawn_worker_node(command):
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-    (output, err) = p.wait()
-    return
+    try:
+        print 'Spawning Python Daemon for Loading.'
+        print 'Executing Command', command
+        while True:
+            p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=False)
+            (output, err) = p.communicate()
+            f = open('loading.log', 'w')
+            write_string = str(datetime.now()) + str(output) + '\n'
+            f.write(write_string)
+            f.close()
+        
+    except Exception as e:
+        print 'Error, in worker process',e
 
 def download_s3(failures,wos,bucket,folder, access_key, secret_key):
     try:
         # connect to the bucket
+        print ('Begining Download for Data %s/%s/%s' %(bucket,folder,wos))
         conn = boto.connect_s3(access_key, secret_key,is_secure=False)
         bucket = conn.get_bucket(bucket) 
         
@@ -54,7 +67,7 @@ def download_s3(failures,wos,bucket,folder, access_key, secret_key):
                 if str(wos) == 'wos_1' and '/wos_10/' in str(l):
                     continue
                 try:
-                    print 'Downloading: %s' % d
+                    #print 'Downloading: %s' % d
                     l.get_contents_to_filename(d)
                 except OSError:
                     if not os.path.exists(d):
@@ -72,7 +85,7 @@ def download_s3(failures,wos,bucket,folder, access_key, secret_key):
         print 'Current Failures: %s' % failures
         
         time.sleep(60)
-        download_s3(wos, bucket,access_key, secret_key)
+        download_s3(failures,wos,bucket,folder, access_key, secret_key)
 
 def download_s3_files(bucket, access_key, secret_key):
     # connect to the bucket
@@ -1102,61 +1115,72 @@ def set_settings(settings_flag,es_host_name):
                             }'"""
         shell_command_execute(es_settings)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--threads', help='Number of threads', required=False)
-parser.add_argument('--host', help='ES Host Address', required=False)
-parser.add_argument('--wos', help='ES WOS', required=False)
-parser.add_argument('--shards', help='ES Shards', required=False)
-parser.add_argument('--replicas', help='ES Replicas', required=False)
-parser.add_argument('--index', help='ES index', required=False)
-parser.add_argument('--access_key', help='aws access key', required=False)
-parser.add_argument('--secret_key', help='aws secret key', required=False)
-parser.add_argument('--bucket', help='aws s3 bucket', required=False)
-parser.add_argument('--folder', help='aws s3 data folder', required=False)
-parser.add_argument('--region', help='aws region', required=False)
-args = parser.parse_args()
 
-access_key = args.access_key
-secret_key = args.secret_key
-failures = []
-wos_data = args.wos
-es_host_name = args.host
-threads = args.threads
-shards = args.shards
-replicas = args.replicas
-index = args.index
-bucket = args.bucket
-folder = args.folder
-region = args.region
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--threads', help='Number of threads', required=False)
+    parser.add_argument('--host', help='ES Host Address', required=False)
+    parser.add_argument('--wos', help='ES WOS', required=False)
+    parser.add_argument('--shards', help='ES Shards', required=False)
+    parser.add_argument('--replicas', help='ES Replicas', required=False)
+    parser.add_argument('--index', help='ES index', required=False)
+    parser.add_argument('--access_key', help='aws access key', required=False)
+    parser.add_argument('--secret_key', help='aws secret key', required=False)
+    parser.add_argument('--bucket', help='aws s3 bucket', required=False)
+    parser.add_argument('--folder', help='aws s3 data folder', required=False)
+    parser.add_argument('--region', help='aws region', required=False)
+    args = parser.parse_args()
+    
+    access_key = args.access_key
+    secret_key = args.secret_key
+    failures = []
+    wos_data = args.wos
+    es_host_name = args.host
+    threads = args.threads
+    shards = args.shards
+    replicas = args.replicas
+    index = args.index
+    bucket = args.bucket
+    folder = args.folder
+    region = args.region
 
-
-print 'passed wos info:',wos_data
-conn = boto.ec2.connect_to_region(region,aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-
-#download the loading data.    
-directory = download_s3(failures, wos_data, bucket,folder,access_key, secret_key)
-
-#Download and load synonym files to all instances in the ES cluster is done by calling the following two functions.
-directory_uploadfiles = download_s3_files('1pelasticsearch-data', access_key, secret_key)
-load_syn_files(es_host_name, directory_uploadfiles)
-
-make_mapping(shards, replicas)
-
-directory = directory[1] + '/' + 'json_data/wos/'+folder+'/' + wos_data
-
-set_settings('ins', es_host_name)
-location = os.path.dirname(os.path.realpath(__file__)) + '/load-es.py'
-mapping = os.path.dirname(os.path.realpath(__file__)) + '/wos.mapping'
-type = 'wos'
-command = ("python %s --data %s --host %s --index %s --type %s --mapping %s --threads %s" % (location, directory, es_host_name, index, type, mapping, threads ))
-
-p = multiprocessing.Process(name='loading worker process', target=spawn_worker_node, args=(command,))
-p.daemon = True
-p.start()
-sys.exit(0)
-print command
-#print 'finished'
-#remove_shit = 'sudo rm -rf ./*'
-#shell_command_execute(remove_shit)
-conn.close()
-
+    conn = boto.ec2.connect_to_region(region,
+                                      aws_access_key_id=access_key, 
+                                      aws_secret_access_key=secret_key)
+    
+    #download the loading data.    
+    directory = download_s3(failures, 
+                            wos_data, 
+                            bucket,
+                            folder,
+                            access_key, 
+                            secret_key)
+    
+    #Download and load synonym files to all instances in the ES cluster is done by calling the following two functions.
+    directory_uploadfiles = download_s3_files('1pelasticsearch-data', 
+                                              access_key, 
+                                              secret_key)
+    load_syn_files(es_host_name, directory_uploadfiles)
+    
+    make_mapping(shards, replicas)
+    
+    directory = directory[1] + '/' + 'json_data/wos/'+folder+'/' + wos_data
+    
+    set_settings('ins', es_host_name)
+    location = os.path.dirname(os.path.realpath(__file__)) + '/load-es.py'
+    mapping = os.path.dirname(os.path.realpath(__file__)) + '/wos.mapping'
+    type = 'wos'
+    command = ("""python %s --data %s --host %s --index %s --type %s --mapping %s --threads %s""" % (location, 
+                                                                                                     directory, 
+                                                                                                     es_host_name, 
+                                                                                                     index, 
+                                                                                                     type, 
+                                                                                                     mapping, 
+                                                                                                     threads ))
+    
+    p = multiprocessing.Process(name='loading worker process', target=spawn_worker_node, args=(command))
+    p.daemon = True
+    p.start()
+    conn.close()
+    print 'Daemon has been executed. Program will now exit.'
+    
