@@ -13,7 +13,7 @@ from datetime import datetime
 
 def shell_command_execute(command):
     print 'Executing Command',command
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=False)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     (output, err) = p.communicate()
     return output
 
