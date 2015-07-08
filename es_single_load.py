@@ -15,12 +15,12 @@ def shell_command_execute(command):
     (output, err) = p.communicate()
     return output
 
-def shell_command_execute2(command):
+def spawn_worker_node(command):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     (output, err) = p.wait()
     return
 
-def download_s3(failures,wos,bucket, access_key, secret_key):
+def download_s3(failures,wos,bucket,folder, access_key, secret_key):
     try:
         # connect to the bucket
         conn = boto.connect_s3(access_key, secret_key,is_secure=False)
@@ -1149,10 +1149,14 @@ location = os.path.dirname(os.path.realpath(__file__)) + '/load-es.py'
 mapping = os.path.dirname(os.path.realpath(__file__)) + '/wos.mapping'
 type = 'wos'
 command = ("python %s --data %s --host %s --index %s --type %s --mapping %s --threads %s" % (location, directory, es_host_name, index, type, mapping, threads ))
-shell_command_execute2(command)
+
+p = multiprocessing.Process(name='loading worker process', target=spawn_worker_node, args=(command,))
+p.daemon = True
+p.start()
+sys.exit(0)
 print command
-print 'finished'
-remove_shit = 'sudo rm -rf ./*'
-shell_command_execute(remove_shit)
+#print 'finished'
+#remove_shit = 'sudo rm -rf ./*'
+#shell_command_execute(remove_shit)
 conn.close()
 
