@@ -10,12 +10,12 @@ import os
 def shell_command_execute(command):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     (output, err) = p.communicate()
-    print output
     return output
 
 def shell_command_execute2(command):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-    return 
+    (output, err) = p.wait()
+    return
 
 def download_s3(wos,bucket, access_key, secret_key):
     try:
