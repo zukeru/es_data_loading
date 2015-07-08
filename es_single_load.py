@@ -1033,7 +1033,7 @@ def load_syn_files(es_host_name, directory):
 
 def set_settings(settings_flag,es_host_name):
     if settings_flag == 'ins':
-        es_settings = """curl -XPUT http://""" + es_host_name + """:9200//_cluster/settings -d '{
+        es_settings = """curl -XPUT http://""" + es_host_name + """:9200/_cluster/settings -d '{
             "persistent" : {
             "cluster.routing.allocation.awareness.attributes": "aws_availability_zone",
             "cluster.routing.allocation.awareness.force.aws_availability_zone.values": "us-west-2c,us-west-2b,us-west-2a",
@@ -1099,7 +1099,7 @@ load_syn_files(es_host_name, directory_uploadfiles)
 
 make_mapping(shards, replicas)
 
-directory = directory[1] + '/' + 'json_data/wos/current/' + wos_data
+directory = directory[1] + '/' + 'json_data/wos/20150707/' + wos_data
 
 set_settings('ins', es_host_name)
 location = os.path.dirname(os.path.realpath(__file__)) + '/load-es.py'
@@ -1109,7 +1109,7 @@ command = ("python %s --data %s --host %s --index %s --type %s --mapping %s --th
 shell_command_execute(command)
 print command
 print 'finished'
-#remove_shit = 'sudo rm -rf ./*'
-#shell_command_execute(remove_shit)
+remove_shit = 'sudo rm -rf ./*'
+shell_command_execute(remove_shit)
 conn.close()
 
