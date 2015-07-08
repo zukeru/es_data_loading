@@ -23,12 +23,11 @@ def spawn_worker_node(command):
         print 'Executing Command', command
         while True:
             p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=False)
-            (output, err) = p.communicate()
-            f = open('loading.log', 'w')
-            write_string = str(datetime.now()) + str(output) + '\n'
-            f.write(write_string)
-            f.close()
-        
+            try:
+                (output, err) = p.communicate()  
+                break   
+            except:
+                continue   
     except Exception as e:
         print 'Error, in worker process',e
 
@@ -43,7 +42,7 @@ def download_s3(failures,wos,bucket,folder, access_key, secret_key):
             try:
                 def retry_failure(d,l):
                     try:
-                        print 'Re-try failures'
+                        print 'retry failures'
                         l.get_contents_to_filename(d)
                     except:
                         print 'retry again.'
