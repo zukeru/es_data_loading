@@ -7,6 +7,9 @@ import multiprocessing
 import time
 import os
 
+#folder argument for s3 which folder to get data from
+#bucket argument
+
 def shell_command_execute(command):
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     (output, err) = p.communicate()
@@ -17,18 +20,37 @@ def shell_command_execute2(command):
     (output, err) = p.wait()
     return
 
-def download_s3(wos,bucket, access_key, secret_key):
+def download_s3(failures,wos,bucket, access_key, secret_key):
     try:
         # connect to the bucket
-        conn = boto.connect_s3(access_key, secret_key)
-        bucket = conn.get_bucket(bucket)
+        conn = boto.connect_s3(access_key, secret_key,is_secure=False)
+        bucket = conn.get_bucket(bucket) 
+        
+        if failures:    
+            try:
+                def retry_failure(d,l):
+                    try:
+                        print 'Re-try failures'
+                        l.get_contents_to_filename(d)
+                    except:
+                        print 'retry again.'
+                        retry_failure(d,l)
+                for d,l in failures:
+                    retry_failure(d,l)
+                
+                failures = []
+            except Exception as e:
+                print e
+                pass
+        
         LOCAL_PATH = os.path.dirname(os.path.realpath(__file__))
         bucket_list = bucket.list()
+        
         for l in bucket_list:
             keyString = str(l.key)
             d = LOCAL_PATH + '/' + keyString
             search_string = '/' + wos + '/'
-            if search_string in str(l) and '20150707' in str(l):
+            if search_string in str(l) and str(folder) in str(l):
                 if str(wos) == 'wos_1' and '/wos_10/' in str(l):
                     continue
                 try:
@@ -39,13 +61,18 @@ def download_s3(wos,bucket, access_key, secret_key):
                         os.makedirs(d)
             else:
                 continue
-            
         conn.close()
         return d,LOCAL_PATH
+    
     except:
+        if str(d) not in str(failures):
+            failures.append((d,l))
+            
         print 'Download timed out. Waiting 1 minute and trying again.'
+        print 'Current Failures: %s' % failures
+        
         time.sleep(60)
-        download_s3(wos, 'tr-ips-ses-data',access_key, secret_key)
+        download_s3(wos, bucket,access_key, secret_key)
 
 def download_s3_files(bucket, access_key, secret_key):
     # connect to the bucket
@@ -1084,23 +1111,30 @@ parser.add_argument('--replicas', help='ES Replicas', required=False)
 parser.add_argument('--index', help='ES index', required=False)
 parser.add_argument('--access_key', help='aws access key', required=False)
 parser.add_argument('--secret_key', help='aws secret key', required=False)
+parser.add_argument('--bucket', help='aws s3 bucket', required=False)
+parser.add_argument('--folder', help='aws s3 data folder', required=False)
+parser.add_argument('--region', help='aws region', required=False)
 args = parser.parse_args()
 
 access_key = args.access_key
 secret_key = args.secret_key
-
+failures = []
 wos_data = args.wos
 es_host_name = args.host
 threads = args.threads
 shards = args.shards
 replicas = args.replicas
 index = args.index
+bucket = args.bucket
+folder = args.folder
+region = args.region
+
 
 print 'passed wos info:',wos_data
-conn = boto.ec2.connect_to_region('us-west-2',aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+conn = boto.ec2.connect_to_region(region,aws_access_key_id=access_key, aws_secret_access_key=secret_key)
 
 #download the loading data.    
-directory = download_s3(wos_data, 'tr-ips-ses-data',access_key, secret_key)
+directory = download_s3(failures, wos_data, bucket,folder,access_key, secret_key)
 
 #Download and load synonym files to all instances in the ES cluster is done by calling the following two functions.
 directory_uploadfiles = download_s3_files('1pelasticsearch-data', access_key, secret_key)
@@ -1108,7 +1142,7 @@ load_syn_files(es_host_name, directory_uploadfiles)
 
 make_mapping(shards, replicas)
 
-directory = directory[1] + '/' + 'json_data/wos/20150707/' + wos_data
+directory = directory[1] + '/' + 'json_data/wos/'+folder+'/' + wos_data
 
 set_settings('ins', es_host_name)
 location = os.path.dirname(os.path.realpath(__file__)) + '/load-es.py'
