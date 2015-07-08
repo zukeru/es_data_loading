@@ -13,30 +13,39 @@ def shell_command_execute(command):
     print output
     return output
 
+def shell_command_execute2(command):
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    return 
+
 def download_s3(wos,bucket, access_key, secret_key):
-    # connect to the bucket
-    conn = boto.connect_s3(access_key, secret_key)
-    bucket = conn.get_bucket(bucket)
-    LOCAL_PATH = os.path.dirname(os.path.realpath(__file__))
-    bucket_list = bucket.list()
-    for l in bucket_list:
-        keyString = str(l.key)
-        d = LOCAL_PATH + '/' + keyString
-        search_string = '/' + wos + '/'
-        if search_string in str(l) and '20150707' in str(l):
-            if str(wos) == 'wos_1' and '/wos_10/' in str(l):
+    try:
+        # connect to the bucket
+        conn = boto.connect_s3(access_key, secret_key)
+        bucket = conn.get_bucket(bucket)
+        LOCAL_PATH = os.path.dirname(os.path.realpath(__file__))
+        bucket_list = bucket.list()
+        for l in bucket_list:
+            keyString = str(l.key)
+            d = LOCAL_PATH + '/' + keyString
+            search_string = '/' + wos + '/'
+            if search_string in str(l) and '20150707' in str(l):
+                if str(wos) == 'wos_1' and '/wos_10/' in str(l):
+                    continue
+                try:
+                    print 'Downloading: %s' % d
+                    l.get_contents_to_filename(d)
+                except OSError:
+                    if not os.path.exists(d):
+                        os.makedirs(d)
+            else:
                 continue
-            try:
-                print 'Downloading: %s' % d
-                l.get_contents_to_filename(d)
-            except OSError:
-                if not os.path.exists(d):
-                    os.makedirs(d)
-        else:
-            continue
-        
-    conn.close()
-    return d,LOCAL_PATH
+            
+        conn.close()
+        return d,LOCAL_PATH
+    except:
+        print 'Download timed out. Waiting 1 minute and trying again.'
+        time.sleep(60)
+        download_s3(wos, 'tr-ips-ses-data',access_key, secret_key)
 
 def download_s3_files(bucket, access_key, secret_key):
     # connect to the bucket
@@ -1106,7 +1115,7 @@ location = os.path.dirname(os.path.realpath(__file__)) + '/load-es.py'
 mapping = os.path.dirname(os.path.realpath(__file__)) + '/wos.mapping'
 type = 'wos'
 command = ("python %s --data %s --host %s --index %s --type %s --mapping %s --threads %s" % (location, directory, es_host_name, index, type, mapping, threads ))
-shell_command_execute(command)
+shell_command_execute2(command)
 print command
 print 'finished'
 remove_shit = 'sudo rm -rf ./*'
