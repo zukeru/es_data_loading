@@ -97,7 +97,7 @@ if __name__ == '__main__':
     # load data
     logging.info('starting to load %s to %s', args.data, es_url)
     es.indices.put_settings({'index': {'refresh_interval': '-1'}}, index=args.index)  
-
+    print args.data
     pool = Pool(processes=args.threads)
     if args.data.startswith('s3://'):
         # S3 - https://boto3.readthedocs.org/en/latest/reference/services/s3.html#bucket

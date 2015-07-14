@@ -957,4 +957,4 @@ echo "
 }
 " >> $WORKSPACE/wos.mapping
 
-python $WORKSPACE/load-es.py --data $wos --host $host --index $index --port $port --type $type --mapping $WORKSPACE/$mapping --threads $threads
+python $WORKSPACE/load-es.py --data "$wos" --host $host --index $index --port $port --type $type --mapping $WORKSPACE/$mapping --threads $threads
