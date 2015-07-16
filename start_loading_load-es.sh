@@ -17,3 +17,17 @@ curl -XPUT http://$host:$port/_cluster/settings -d '{
 }'
 
 python $WORKSPACE/load-es.py --data "$wos" --host $host --index $index --port $port --type $type --mapping "$mapping" --threads $threads
+
+curl -XPUT http://$host:$port/_cluster/settings -d '{
+"transient" : {
+               "index.warmer.enabled": true,
+               "indices.memory.index_buffer_size": "40%",
+               "indices.store.throttle.max_bytes_per_sec": "100mb",
+               "index.number_of_replicas": 0,
+               "indices.store.throttle.type": "Merge",
+               "index.compound_on_flush": true,
+               "index.compound_format": true,
+               "http.max_content_length": "1000mb",
+                }
+}'
+
