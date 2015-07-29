@@ -146,7 +146,7 @@ def commands( name="Execute Load" ):
     #some_html = ('%s,%s,%s,%s,%s,%s,%s,%s,%s' % (command,host,threads,mapping_location,data_location, ports, index, protocol, types))
 
 
-@route('/delete/<name>', method='DELETE' )
+@route('/delete/<name>', method='GET' )
 def recipe_delete( name="Delete Index" ):
     values = name.split('&')
     try:
