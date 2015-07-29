@@ -150,7 +150,9 @@ def recipe_delete( name="Delete Index" ):
     try:
         index = values[0]
         host = values[1] + ".us-west-2.elb.amazonaws.com"
+        host = host.split('=')[1]
         port = values[2]
+        port = port.split('=')[1]
     except Exception as e:
         return """Please include all nessecary values: example: 
                 http://127.0.0.1:8001/delete/wos4&host=internal-1pelasticsearch-deb-ILB-2051321412&port=9200"""
