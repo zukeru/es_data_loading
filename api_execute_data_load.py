@@ -41,12 +41,13 @@ def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type):
     s3 = boto3.client('s3')
     file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
     file_contents = file_handle['Body'].read()
-    print file_handle, s3_bucket, s3_key
+    logging.info('%s'%s3_key)
     if file_contents:
         if s3_key.endswith('.gz'):
             file_contents = decompress_gzip(file_contents)
         es = Elasticsearch(host=es_host, port=es_port, timeout=180)
         es.bulk(body=file_contents, index=es_index, doc_type=es_type, timeout=120)
+        
 
 
 def set_es_settings(host, port):
@@ -91,10 +92,8 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
     s3 = boto3.resource('s3', aws_access_key_id=access, aws_secret_access_key=secret)
     s3_bucket, s3_key = parse_s3_path(data)
     for file_summary in s3.Bucket(s3_bucket).objects.all():
-        # filter down to files that start with the specified path 
-        print file_summary, s3_key
         if file_summary.key.startswith(s3_key):
-            pool.apply_async(load_s3_file, args=(s3_bucket, file_summary.key, host, int(ports), index, type))
+            pool.apply_async(load_s3_file, args=(s3_bucket, file_summary.key, host, ports, index, type))
             
     pool.close()
     pool.join()
@@ -107,16 +106,7 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
 @route('/load_data/')
 def recipes_list():
     return """Please include all nessecary values: example: 
-            http://127.0.0.1:8001/load_data/
-            load&
-            host=internal-1pelasticsearch-deb-ILB-2051321412&
-            thread=5&
-            mappniglocation=tr-ips-ses-data|mappings|version_1_2|wos.mapping&
-            datalocation=tr-ips-ses-data|json-data|wos|20150724|wos_1&
-            port=9200&
-            index=wos4&
-            protocol=http&
-            type=wos"""
+            http://127.0.0.1:8001/load_data/load&host=internal-1pelasticsearch-deb-ILB-2051321412&thread=5&mappinglocation=tr-ips-ses-data|mappings|version_1_2|wos.mapping&datalocation=tr-ips-ses-data|json-data|wos|20150724|wos-1&port=9200&index=wos4&protocol=http&type=wos"""
 
 @route('/load_data/<name>', method='GET')
 def recipe_show( name="Mystery Recipe" ):
