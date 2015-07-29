@@ -136,13 +136,13 @@ def commands( name="Execute Load" ):
         access = access.split('=')[1]
         secret = secret.split('=')[1]
 
+        yield "Starting Load"
+        start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
     except Exception as e:
-        return """Please include all nessecary values: example: 
+        yield """Please include all nessecary values: example: 
                 http://127.0.0.1:8001/load_data/load&host=internal-1pelasticsearch-deb-ILB-2051321412&thread=5&mappinglocation=tr-ips-ses-data|mappings|version_1_2|wos.mapping&datalocation=tr-ips-ses-data|json-data|wos|20150724|wos-1&port=9200&index=wos4&protocol=http&type=wos&access=access_key&secret=secret_key"""
 
-    print command,host,threads,mapping_location,data_location
-    yield "Starting Load"
-    start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
+
     #some_html = ('%s,%s,%s,%s,%s,%s,%s,%s,%s' % (command,host,threads,mapping_location,data_location, ports, index, protocol, types))
 
 
