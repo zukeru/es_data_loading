@@ -97,19 +97,17 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
             
     pool.close()
     pool.join()
-    
     es.indices.put_settings({'index': {'refresh_interval': '1s'}}, index=index)
-
     logging.info('finished loading %s to %s in %s', data, es_url, str(datetime.now() - start))
     
     
 @route('/load_data/')
-def recipes_list():
+def no_comands():
     return """Please include all nessecary values: example: 
-            http://127.0.0.1:8001/load_data/load&host=internal-1pelasticsearch-deb-ILB-2051321412&thread=5&mappinglocation=tr-ips-ses-data|mappings|version_1_2|wos.mapping&datalocation=tr-ips-ses-data|json-data|wos|20150724|wos-1&port=9200&index=wos4&protocol=http&type=wos"""
+            http://127.0.0.1:8001/load_data/load&host=internal-1pelasticsearch-deb-ILB-2051321412&thread=5&mappinglocation=tr-ips-ses-data|mappings|version_1_2|wos.mapping&datalocation=tr-ips-ses-data|json-data|wos|20150724|wos-1&port=9200&index=wos4&protocol=http&type=wos&access=access_key&secret=secret_key"""
 
 @route('/load_data/<name>', method='GET')
-def recipe_show( name="Mystery Recipe" ):
+def commands( name="Execute Load" ):
 
     values = name.split('&')
     
@@ -139,17 +137,31 @@ def recipe_show( name="Mystery Recipe" ):
         secret = secret.split('=')[1]
 
     except Exception as e:
-        return 'Please include all nessecary values: example: http://127.0.0.1:8001/load_data/load&host=test.com&thread=5&woslocation=s3&s3location=test&port=9200&index=wos4&protocol=http&type=wos'
-    
-    
+        return """Please include all nessecary values: example: 
+                http://127.0.0.1:8001/load_data/load&host=internal-1pelasticsearch-deb-ILB-2051321412&thread=5&mappinglocation=tr-ips-ses-data|mappings|version_1_2|wos.mapping&datalocation=tr-ips-ses-data|json-data|wos|20150724|wos-1&port=9200&index=wos4&protocol=http&type=wos&access=access_key&secret=secret_key"""
+
     print command,host,threads,mapping_location,data_location
+    yield "Starting Load"
     start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
     some_html = ('%s,%s,%s,%s,%s,%s,%s,%s,%s' % (command,host,threads,mapping_location,data_location, ports, index, protocol, types))
     return some_html
 
-#@route('/recipes/<name>', method='DELETE' )
-#def recipe_delete( name="Mystery Recipe" ):
-#    return "DELETE RECIPE " + name
+@route('/delete/<name>', method='DELETE' )
+def recipe_delete( name="Delete Index" ):
+    values = name.split('&')
+    try:
+        index = values[0]
+        host = values[1] + ".us-west-2.elb.amazonaws.com"
+        port = values[2]
+    except Exception as e:
+        return """Please include all nessecary values: example: 
+                http://127.0.0.1:8001/delete/wos4&host=internal-1pelasticsearch-deb-ILB-2051321412&port=9200"""
+    try:
+        es = Elasticsearch(host=host, port=port, timeout=180)                
+        es.indices.create(index=index) 
+        return "Successfully Deleted Index"
+    except:
+        return "Failed to Deleted Index"
 
 #@route('/recipes/<name>', method='PUT')
 #def recipe_save( name="Mystery Recipe" ):
