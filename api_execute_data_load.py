@@ -155,7 +155,7 @@ def recipe_delete( name="Delete Index" ):
         return """Please include all nessecary values: example: 
                 http://127.0.0.1:8001/delete/wos4&host=internal-1pelasticsearch-deb-ILB-2051321412&port=9200"""
     try:         
-        curl_command = 'http://' + host + ':9200/' + index     
+        curl_command = 'curl -XDELETE http://' + host + ':9200/' + index     
         shell_command_execute(curl_command)
         return "Successfully Deleted Index"
     except Exception as e:
