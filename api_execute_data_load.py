@@ -143,8 +143,8 @@ def commands( name="Execute Load" ):
     print command,host,threads,mapping_location,data_location
     yield "Starting Load"
     start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
-    some_html = ('%s,%s,%s,%s,%s,%s,%s,%s,%s' % (command,host,threads,mapping_location,data_location, ports, index, protocol, types))
-    return some_html
+    #some_html = ('%s,%s,%s,%s,%s,%s,%s,%s,%s' % (command,host,threads,mapping_location,data_location, ports, index, protocol, types))
+
 
 @route('/delete/<name>', method='DELETE' )
 def recipe_delete( name="Delete Index" ):
