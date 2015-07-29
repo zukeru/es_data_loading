@@ -160,8 +160,8 @@ def recipe_delete( name="Delete Index" ):
         es = Elasticsearch(host=host, port=port, timeout=180)                
         es.indices.create(index=index) 
         return "Successfully Deleted Index"
-    except:
-        return "Failed to Deleted Index"
+    except Exception as e:
+        return "Failed to Deleted Index %s" % e
 
 #@route('/recipes/<name>', method='PUT')
 #def recipe_save( name="Mystery Recipe" ):
