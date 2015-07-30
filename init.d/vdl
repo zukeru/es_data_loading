@@ -8,14 +8,14 @@
 # Start the service 
 start() {
         initlog -c "echo -n Starting VDL server: "
-        /opt/vdl/vdl.py &
+        /opt/vdl/vdl.py & >> /var/log/vdl/vdl.log
         success $"VDL Server Started"
         echo
 }
 # Restart the service vdl
 stop() {
         initlog -c "echo -n Stopping VDL server: "
-        killproc vdl.py
+        killproc python /opt/vdl/vdl.py
         echo
 }
 ### main logic ###

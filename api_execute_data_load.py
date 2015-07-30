@@ -224,7 +224,9 @@ def recipe_delete( name="Delete Index" ):
 if __name__ == '__main__':
     reload(sys)
     sys.setdefaultencoding('utf8')
-    logging.config.fileConfig('logging.ini')
+    url = os.path.dirname(os.path.realpath(__file__)) + '/logging.ini'
+    print url
+    logging.config.fileConfig(url)
     run(host='172.31.28.189', port=8001, debug=True)
 
 
