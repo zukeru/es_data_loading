@@ -50,7 +50,7 @@ def set_es_settings(host, port):
                                 "transient" : {
                                     "index.warmer.enabled": true,
                                     "indices.memory.index_buffer_size": "40%",
-                                    "indices.store.throttle.max_bytes_per_sec": "100mb",
+                                    "indices.store.throttle.max_bytes_per_sec": "10mb",
                                     "index.number_of_replicas": 0,
                                     "indices.store.throttle.type": "Merge",
                                     "index.compound_on_flush": true,
@@ -59,6 +59,21 @@ def set_es_settings(host, port):
                                 }
                             }'"""
     shell_command_execute(es_settings) 
+    
+def reset_es_settings(host, port):
+    es_settings = """curl -XPUT http://""" + host + """:"""+port+"""//_cluster/settings -d '{
+                                "persistent" : {
+                                    "indices.memory.index_buffer_size": "20%",
+                                    "indices.store.throttle.max_bytes_per_sec": "100mb",
+                                    "index.number_of_replicas": 10,
+                                    "indices.store.throttle.type": "Merge",
+                                    "index.compound_on_flush": false,
+                                    "index.compound_format": false,                               
+                                    "cluster.routing.allocation.awareness.attributes": "aws_availability_zone",
+                                    "cluster.routing.allocation.awareness.force.aws_availability_zone.values": "us-west-2c,us-west-2b,us-west-2a",
+                                }
+                            }'"""
+    shell_command_execute(es_settings)     
 
 #this is what is called to set up the loading process from the api.    
 def start_load(secret, access, protocol, host, ports, index, type, mapping, data,threads):
@@ -97,7 +112,7 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
     
     es.indices.put_settings({'index': {'refresh_interval': '1s'}}, index=index)
     logging.info('finished loading %s to %s in %s', data, es_url, str(datetime.now() - start))
-    
+    #reset_es_settings(host, ports)
 #This is what is called when no arguments are given
 @route('/load_data/')
 def no_comands():
