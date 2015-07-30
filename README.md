@@ -11,7 +11,7 @@ However, currently it is commented out on line 115 of the api_execute_data_load.
 If you wish to enable it please uncomment it.
 
 ##How to USE!
-#Here are the examples of how to use it.
+##Here are the examples of how to use it.
 
 	#All Variables are required and required in the order below, and here they are:
 	
@@ -54,7 +54,6 @@ If you wish to enable it please uncomment it.
 				#The first var is the name of the index you wish to delete.
 				#Host: this can be either the ip address or dns name to your es cluser
 				#Port: The number of worker threads to spawn
-
 							
-##All values are seperated by & sign. They are need to be key=value, with key being the variable name. This will be used later.
-			If you need to use a \ in a variable please use | instead. I.e. in your mapping and datalocation variables you will need this.
+			#All values are seperated by & sign. They are need to be key=value, with key being the variable name. This will be used later.
+			#If you need to use a \ in a variable please use | instead. I.e. in your mapping and datalocation variables you will need this.
