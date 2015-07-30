@@ -43,10 +43,10 @@ def shell_command_execute(command):
     return output
 
 # load an S3 file to elasticsearch
-def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type):
+def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
     try:
         logging.info('loading s3://%s/%s', s3_bucket, s3_key)
-        s3 = boto3.client('s3')
+        s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
         file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
         file_contents = file_handle['Body'].read()
         logging.info('%s'%s3_key)
@@ -119,7 +119,7 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
     
     for file_summary in s3.Bucket(s3_bucket).objects.all():
         if file_summary.key.startswith(s3_key):
-            pool.apply_async(load_s3_file, args=(s3_bucket, file_summary.key, host, ports, index, type))
+            pool.apply_async(load_s3_file, args=(s3_bucket, file_summary.key, host, ports, index, type, access, secret))
             
     pool.close()
     pool.join()
