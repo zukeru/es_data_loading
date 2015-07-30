@@ -26,6 +26,7 @@ import argparse
 import logging
 import logging.config
 from bottle import route, run
+from boto.cloudformation.stack import Output
 
 # decompress a gzip string
 def decompress_gzip(data):
@@ -55,6 +56,23 @@ def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access,
                 file_contents = decompress_gzip(file_contents)
             es = Elasticsearch(host=es_host, port=es_port, timeout=180)
             es.bulk(body=file_contents, index=es_index, doc_type=es_type, timeout=120)
+    except Exception as e:
+        logging.error("There has been a major error %s" % e)
+
+# load an S3 file to elasticsearch
+def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
+    try:
+        logging.info('loading s3://%s/%s', s3_bucket, s3_key)
+        s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
+        file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
+        file_contents = file_handle['Body'].read()
+        logging.info('%s'%s3_key)
+        if file_contents:
+            if s3_key.endswith('.gz'):
+                file_contents = decompress_gzip(file_contents)
+            es = Elasticsearch(host=es_host, port=es_port, timeout=180)
+            res = es.get(index="test-index", doc_type='tweet', id=1)
+            es.insert(body = file_contents, index = es_index, doc_type=es_type, timeout=120)
     except Exception as e:
         logging.error("There has been a major error %s" % e)
 
@@ -141,6 +159,18 @@ def no_comands():
                 use = to seperate key value pairs
                 use | to insert \
                 """
+@route('/get_status/<name>')
+def get_status( name="Get Loading Status"):
+    values = name.split('&')
+    #split apart the url syntax items are split by & key values by = and any plcae that needs \ gets |
+    try:
+        host = values[0]
+        port = values[1]
+        cat_es_thread_pool = 'curl http://'  + host + ':' + port + '/_cat/thread_pool'
+        output = shell_command_execute(cat_es_thread_pool)
+        return output
+    except:
+        return """ Error getting status """ 
                 
 @route('/load_data/<name>', method='GET')
 def commands( name="Execute Load" ):
@@ -171,7 +201,7 @@ def commands( name="Execute Load" ):
         access = access.split('=')[1]
         secret = secret.split('=')[1]
 
-        yield "Starting Load"
+        yield ("Starting Load <html><META HTTP-EQUIV='refresh' CONTENT='15'><head><title>VDL: Starting data load.</title></head><body><iframe src='http://127.0.0.1:8001/get_status/%s&%s' width='100%' height='100%'></iframe></body></html>" % (host, ports))
         start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
     except Exception as e:
         logging.error(e)
