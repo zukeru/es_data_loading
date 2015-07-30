@@ -7,12 +7,12 @@
 . /etc/init.d/functions
 # Start the service 
 start() {
-        initlog -c "echo -n Starting FOO server: "
+        initlog -c "echo -n Starting VDL server: "
         /opt/vdl/vdl.py &
         success $"VDL Server Started"
         echo
 }
-# Restart the service FOO
+# Restart the service vdl
 stop() {
         initlog -c "echo -n Stopping VDL server: "
         killproc vdl.py
