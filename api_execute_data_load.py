@@ -164,17 +164,19 @@ def get_status( name="Get Loading Status"):
     values = name.split('&')
     #split apart the url syntax items are split by & key values by = and any plcae that needs \ gets |
     try:
-        host = values[0] + ".us-west-2.elb.amazonaws.com"
-        port = values[1]
-        host = 'http://'  + host + ':' + port
+        host = str(values[0]) + ".us-west-2.elb.amazonaws.com"
+        port = str(values[1])
+        host = 'http://' + host + ':' + port
+        
         index = values[2] 
         cat_es_thread_pool = 'curl ' + host + '/_cat/thread_pool'
         output = shell_command_execute(cat_es_thread_pool)
-        stats = host + '/' + index +'/_stats?pretty=true'
+        
+        stats = 'curl ' + host + '/' + index +'/_stats?pretty=true'
         return_stats = shell_command_execute(stats)
-        return output, stats
+        return output, return_stats
     except Exception as e:
-        return """ Error getting status %s """ % e 
+        return (""" Error getting status %s, %s """ % (e, host)) 
                 
 @route('/load_data/<name>', method='GET')
 def commands( name="Execute Load" ):
