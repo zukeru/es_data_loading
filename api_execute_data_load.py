@@ -201,7 +201,7 @@ def commands( name="Execute Load" ):
         access = access.split('=')[1]
         secret = secret.split('=')[1]
 
-        yield ("Starting Load <html><META HTTP-EQUIV='refresh' CONTENT='15'><head><title>VDL: Starting data load.</title></head><body><iframe src='http://127.0.0.1:8001/get_status/%s&%s' width='100%' height='100%'></iframe></body></html>" % (host, ports))
+        yield ("Starting Load <html><META HTTP-EQUIV='refresh' CONTENT='15'><head><title>VDL: Starting data load.</title></head><body><iframe src='http://127.0.0.1:8001/get_status/%s&%s' width='900' height='900'></iframe></body></html>" % (host, ports))
         start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
     except Exception as e:
         logging.error(e)
