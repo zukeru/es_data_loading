@@ -166,9 +166,13 @@ def get_status( name="Get Loading Status"):
     try:
         host = values[0]
         port = values[1]
-        cat_es_thread_pool = 'curl http://'  + host + ':' + port + '/_cat/thread_pool'
+        host = 'http://'  + host + ':' + port
+        index = values[3] 
+        cat_es_thread_pool = 'curl ' + + '/_cat/thread_pool'
         output = shell_command_execute(cat_es_thread_pool)
-        return output
+        stats = host + '/' + index +'/_stats?pretty=true'
+        return_stats = shell_command_execute(stats)
+        return output, stats
     except:
         return """ Error getting status """ 
                 
@@ -201,7 +205,7 @@ def commands( name="Execute Load" ):
         access = access.split('=')[1]
         secret = secret.split('=')[1]
 
-        yield ("Starting Load <html><META HTTP-EQUIV='refresh' CONTENT='15'><head><title>VDL: Starting data load.</title></head><body><iframe src='http://127.0.0.1:8001/get_status/%s&%s' width='900' height='900'></iframe></body></html>" % (host, ports))
+        yield ("Starting Load of data use /get_status/es_url&es_port&index to get the status of your load.")
         start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
     except Exception as e:
         logging.error(e)
