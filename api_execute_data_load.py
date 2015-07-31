@@ -168,7 +168,7 @@ def get_status( name="Get Loading Status"):
         port = values[1]
         host = 'http://'  + host + ':' + port
         index = values[2] 
-        cat_es_thread_pool = 'curl ' + + '/_cat/thread_pool'
+        cat_es_thread_pool = 'curl ' + host + '/_cat/thread_pool'
         output = shell_command_execute(cat_es_thread_pool)
         stats = host + '/' + index +'/_stats?pretty=true'
         return_stats = shell_command_execute(stats)
