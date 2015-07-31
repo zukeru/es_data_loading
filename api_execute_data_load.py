@@ -164,7 +164,7 @@ def get_status( name="Get Loading Status"):
     values = name.split('&')
     #split apart the url syntax items are split by & key values by = and any plcae that needs \ gets |
     try:
-        host = values[0]
+        host = values[0] + ".us-west-2.elb.amazonaws.com"
         port = values[1]
         host = 'http://'  + host + ':' + port
         index = values[3] 
