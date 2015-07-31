@@ -27,6 +27,8 @@ import logging
 import logging.config
 from bottle import route, run
 from boto.cloudformation.stack import Output
+import json
+
 
 # decompress a gzip string
 def decompress_gzip(data):
@@ -163,6 +165,7 @@ def no_comands():
 def get_status( name="Get Loading Status"):
     values = name.split('&')
     #split apart the url syntax items are split by & key values by = and any plcae that needs \ gets |
+    #set auto refrest split values
     try:
         host = str(values[0]) + ".us-west-2.elb.amazonaws.com"
         port = str(values[1])
@@ -174,6 +177,7 @@ def get_status( name="Get Loading Status"):
         
         stats = 'curl ' + host + '/' + index +'/_stats?pretty=true'
         return_stats = shell_command_execute(stats)
+        ret_json = json.loads(return_stats)
         return output, return_stats
     except Exception as e:
         return (""" Error getting status %s, %s """ % (e, host)) 
