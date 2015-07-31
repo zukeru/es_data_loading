@@ -167,7 +167,7 @@ def get_status( name="Get Loading Status"):
         host = values[0] + ".us-west-2.elb.amazonaws.com"
         port = values[1]
         host = 'http://'  + host + ':' + port
-        index = values[3] 
+        index = values[2] 
         cat_es_thread_pool = 'curl ' + + '/_cat/thread_pool'
         output = shell_command_execute(cat_es_thread_pool)
         stats = host + '/' + index +'/_stats?pretty=true'
