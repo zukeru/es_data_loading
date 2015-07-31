@@ -173,8 +173,8 @@ def get_status( name="Get Loading Status"):
         stats = host + '/' + index +'/_stats?pretty=true'
         return_stats = shell_command_execute(stats)
         return output, stats
-    except:
-        return """ Error getting status """ 
+    except Exception as e:
+        return """ Error getting status %s """ % e 
                 
 @route('/load_data/<name>', method='GET')
 def commands( name="Execute Load" ):
