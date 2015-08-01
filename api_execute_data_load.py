@@ -253,6 +253,8 @@ def commands( name="Execute Load" ):
         p = Process(target=start_load, args=(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads))
         p.daemon = True
         p.start()
+        p.join()
+        
     except Exception as e:
         logging.error(e)
         yield   """Please include all nessecary values: example: 
