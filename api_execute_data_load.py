@@ -42,7 +42,6 @@ def parse_s3_path(str):
 def shell_command_execute(command):
     p = Popen(command, stdout=PIPE, shell=True)
     (output, err) = p.communicate()
-    logging.info(output)
     return output
 
 # load an S3 file to elasticsearch
@@ -288,6 +287,6 @@ if __name__ == '__main__':
     url = os.path.dirname(os.path.realpath(__file__)) + '/logging.ini'
     print url
     logging.config.fileConfig(url)
-    #run(host='172.31.28.189', port=8001, debug=True)
-    run(host='127.0.0.1', port=8001, debug=True)
+    run(host='172.31.28.189', port=8001, debug=True)
+    #run(host='127.0.0.1', port=8001, debug=True)
 
