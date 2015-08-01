@@ -197,7 +197,7 @@ def commands( name="Execute Load" ):
         #start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
         pool = Pool(1)
         pool = Pool(processes=int(1))
-        pool.map(start_load, secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
+        pool.apply_async(start_load, args=(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads))
 
         pool.close()
         pool.join()
