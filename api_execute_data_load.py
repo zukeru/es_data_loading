@@ -17,7 +17,7 @@
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import RequestError
 from subprocess import Popen, PIPE
-from multiprocessing import Pool
+from multiprocessing import Pool, Process
 from datetime import datetime
 import boto3
 import sys
@@ -35,6 +35,7 @@ def decompress_gzip(data):
     return Popen(['zcat'], stdout=PIPE, stdin=PIPE).communicate(input=data)[0]
 
 # parse an s3 path into a bucket and key 's3://my-bucket/path/to/data' -> ('my-bucket', 'path/to/data')
+
 def parse_s3_path(str):
     _, _, bucket, key = str.split('/', 3)
     return (bucket, key)
@@ -45,6 +46,7 @@ def shell_command_execute(command):
     return output
 
 # load an S3 file to elasticsearch
+
 def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
     try:
         logging.info('loading s3://%s/%s', s3_bucket, s3_key)
@@ -77,39 +79,53 @@ def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, 
     except Exception as e:
         logging.error("There has been a major error %s" % e)
 
-#Set ES with transient settings        
-def set_es_settings(host, port):
-    es_settings = """curl -XPUT http://""" + host + """:"""+port+"""//_cluster/settings -d '{
-                                "transient" : {
-                                    "index.warmer.enabled": true,
-                                    "indices.memory.index_buffer_size": "40%",
-                                    "indices.store.throttle.max_bytes_per_sec": "10mb",
-                                    "index.number_of_replicas": 0,
-                                    "indices.store.throttle.type": "Merge",
-                                    "index.compound_on_flush": true,
-                                    "index.compound_format": true,
-                                    "http.max_content_length": "1000mb",
-                                }
-                            }'"""
-    shell_command_execute(es_settings) 
-    
-def reset_es_settings(host, port):
-    es_settings = """curl -XPUT http://""" + host + """:"""+port+"""//_cluster/settings -d '{
-                                "persistent" : {
-                                    "indices.memory.index_buffer_size": "20%",
-                                    "indices.store.throttle.max_bytes_per_sec": "100mb",
-                                    "index.number_of_replicas": 10,
-                                    "indices.store.throttle.type": "Merge",
-                                    "index.compound_on_flush": false,
-                                    "index.compound_format": false,                               
-                                    "cluster.routing.allocation.awareness.attributes": "aws_availability_zone",
-                                    "cluster.routing.allocation.awareness.force.aws_availability_zone.values": "us-west-2c,us-west-2b,us-west-2a",
-                                }
-                            }'"""
-    shell_command_execute(es_settings)     
-
 #this is what is called to set up the loading process from the api.    
 def start_load(secret, access, protocol, host, ports, index, type, mapping, data,threads):
+    from elasticsearch import Elasticsearch
+    from elasticsearch.exceptions import RequestError
+    from subprocess import Popen, PIPE
+    from multiprocessing import Pool, Process
+    from datetime import datetime
+    import boto3
+    import sys
+    import os
+    import argparse
+    import logging
+    import logging.config
+    from bottle import route, run
+    from boto.cloudformation.stack import Output
+    import json
+
+    def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
+        try:
+            logging.info('loading s3://%s/%s', s3_bucket, s3_key)
+            s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
+            file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
+            file_contents = file_handle['Body'].read()
+            logging.info('%s'%s3_key)
+            if file_contents:
+                if s3_key.endswith('.gz'):
+                    file_contents = decompress_gzip(file_contents)
+                es = Elasticsearch(host=es_host, port=es_port, timeout=180)
+                es.bulk(body=file_contents, index=es_index, doc_type=es_type, timeout=120)
+        except Exception as e:
+            logging.error("There has been a major error %s" % e)
+            
+    def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
+        try:
+            logging.info('loading s3://%s/%s', s3_bucket, s3_key)
+            s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
+            file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
+            file_contents = file_handle['Body'].read()
+            logging.info('%s'%s3_key)
+            if file_contents:
+                if s3_key.endswith('.gz'):
+                    file_contents = decompress_gzip(file_contents)
+                es = Elasticsearch(host=es_host, port=es_port, timeout=180)
+                res = es.get(index="test-index", doc_type='tweet', id=1)
+                es.insert(body = file_contents, index = es_index, doc_type=es_type, timeout=120)
+        except Exception as e:
+            logging.error("There has been a major error %s" % e)
     
     start = datetime.now()
     es_url = protocol + '://' + host + ':' + str(ports) + '/' + index + '/' + type
@@ -126,8 +142,6 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
     except:
         logging.error('index exist')
     
-    set_es_settings(host, ports)
-
     logging.info('starting to load %s to %s', data, es_url)
     es.indices.put_settings({'index': {'refresh_interval': '-1'}}, index=index)  
     
@@ -145,6 +159,7 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
     
     es.indices.put_settings({'index': {'refresh_interval': '1s'}}, index=index)
     logging.info('finished loading %s to %s in %s', data, es_url, str(datetime.now() - start))
+    sys.exit(0)
     #reset_es_settings(host, ports)
 #This is what is called when no arguments are given
 @route('/load_data/')
@@ -234,7 +249,10 @@ def commands( name="Execute Load" ):
         secret = secret.split('=')[1]
 
         yield ("Starting Load of data use /get_status/es_url&es_port&index to get the status of your load.")
-        start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
+        #start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
+        p = Process(target=start_load, args=(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads))
+        p.daemon = True
+        p.start()
     except Exception as e:
         logging.error(e)
         yield   """Please include all nessecary values: example: 
