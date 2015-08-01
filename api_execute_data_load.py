@@ -17,7 +17,7 @@
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import RequestError
 from subprocess import Popen, PIPE
-from multiprocessing import Pool, Process
+from multiprocessing import Pool, Process, pool
 from datetime import datetime
 import boto3
 import sys
@@ -28,6 +28,23 @@ import logging.config
 from bottle import route, run
 from boto.cloudformation.stack import Output
 import json
+
+
+
+
+class NoDaemonProcess(Process):
+    # make 'daemon' attribute always return False
+    def _get_daemon(self):
+        return False
+    def _set_daemon(self, value):
+        pass
+    daemon = property(_get_daemon, _set_daemon)
+
+# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
+# because the latter is only a wrapper function, not a proper class.
+class MyPool(pool.Pool):
+    Process = NoDaemonProcess
+
 
 #this is what is called to set up the loading process from the api.    
 def start_load(secret, access, protocol, host, ports, index, type, mapping, data,threads):
@@ -178,11 +195,13 @@ def commands( name="Execute Load" ):
 
         yield ("Starting Load of data use /get_status/es_url&es_port&index to get the status of your load.")
         #start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
-        d = Process(name='daemon', target=start_load, args=(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads))
-        d.daemon = True
-        d.start()
-        d.join()    
-        
+        pool = Pool(1)
+        pool = Pool(processes=int(1))
+        pool.map(start_load, args=(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads))
+
+        pool.close()
+        pool.join()
+
     except Exception as e:
         logging.error(e)
         yield   """Please include all nessecary values: example: 
