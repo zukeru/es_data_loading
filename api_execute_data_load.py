@@ -166,21 +166,42 @@ def get_status( name="Get Loading Status"):
     values = name.split('&')
     #split apart the url syntax items are split by & key values by = and any plcae that needs \ gets |
     #set auto refrest split values
+    #+ ".us-west-2.elb.amazonaws.com"
     try:
-        host = str(values[0]) + ".us-west-2.elb.amazonaws.com"
+        host = str(values[0]) 
         port = str(values[1])
         host = 'http://' + host + ':' + port
         
         index = values[2] 
         cat_es_thread_pool = 'curl ' + host + '/_cat/thread_pool'
+        build_html_newlines = ''
         output = shell_command_execute(cat_es_thread_pool)
-        
-        stats = 'curl ' + host + '/' + index +'/_stats?pretty=true'
+        for line in output.split('\n'):
+            try:
+                values = line.split()
+                build_html_newlines = build_html_newlines + '<td align="right">' + values[0] + '</td>' + '<td align="right">' + values[1] + '</td>' + '<td align="right">' + values[2] + '</td>' + '<td align="right">' + values[3] + '</td>' + '<td align="right">' + values[4] + '</td></tr>'
+            except:
+                continue    
+        thread_pool_html = '<table><tr><td>instance</td><td>ip</td><td>thread pool active</td><td>thread pool queue</td><td>thread pool rejected</td></tr><tr>' + str(build_html_newlines) + '</table>'
+        stats = 'curl ' + str(host) + '/' + str(index) +'/_stats?pretty=true'
         return_stats = shell_command_execute(stats)
         ret_json = json.loads(return_stats)
-        return output, return_stats
+        index_rate_html = '<table><td>Indexing Rate:</td><td>' + str(ret_json['_all']['total']['indexing']['index_current']) + '</td></table></html>'
+        top_html = '<META HTTP-EQUIV="refresh" CONTENT="15"><html><title>VDL Status</title><body>'
+        logs = open(os.path.dirname(os.path.realpath(__file__)) + '/load-es.log')
+        log_contents = logs.read()
+        log_values = log_contents.split('\n')
+        log_html = ''
+        for line in log_values:
+            log_html += '<tr><td> ' + line + '</td></tr>'
+        
+        log_html = '<table>' + log_html + '</table>'
+        
+        file_html = top_html + thread_pool_html + index_rate_html + '<br><br>' + log_html
+        return file_html
     except Exception as e:
         return (""" Error getting status %s, %s """ % (e, host)) 
+                
                 
 @route('/load_data/<name>', method='GET')
 def commands( name="Execute Load" ):
@@ -267,6 +288,6 @@ if __name__ == '__main__':
     url = os.path.dirname(os.path.realpath(__file__)) + '/logging.ini'
     print url
     logging.config.fileConfig(url)
-    run(host='172.31.28.189', port=8001, debug=True)
-
+    #run(host='172.31.28.189', port=8001, debug=True)
+    run(host='127.0.0.1', port=8001, debug=True)
 
