@@ -213,13 +213,7 @@ def recipe_delete( name="Delete Index" ):
         return "Failed to Deleted Index %s" % e
 
 if __name__ == '__main__':
-    
-    
-    try:
-        command = 'sudo python ' + os.path.dirname(os.path.realpath(__file__)) + '/status.py'
-        shell_command_execute(command)
-    except:
-        print 'error starting status updater'
+
     reload(sys)
     sys.setdefaultencoding('utf8')
     url = os.path.dirname(os.path.realpath(__file__)) + '/logging.ini'

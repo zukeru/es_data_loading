@@ -8,7 +8,7 @@
 # Start the service 
 start() {
         initlog -c "echo -n Starting VDL server: "
-        /opt/vdl/vdl.py & >> /var/log/vdl/vdl.log
+        /opt/vdl/vdl.py &
         success $"VDL Server Started"
         echo
 }
