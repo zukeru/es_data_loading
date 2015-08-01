@@ -28,8 +28,6 @@ import logging.config
 from bottle import route, run
 from boto.cloudformation.stack import Output
 import json
-from es_data_loading.status import shell_command_execute
-
 
 # decompress a gzip string
 def decompress_gzip(data):
@@ -215,8 +213,10 @@ def recipe_delete( name="Delete Index" ):
         return "Failed to Deleted Index %s" % e
 
 if __name__ == '__main__':
-    command = 'sudo python ' + os.path.dirname(os.path.realpath(__file__)) + '/status.py'
+    
+    
     try:
+        command = 'sudo python ' + os.path.dirname(os.path.realpath(__file__)) + '/status.py'
         shell_command_execute(command)
     except:
         print 'error starting status updater'
