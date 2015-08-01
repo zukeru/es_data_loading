@@ -11,6 +11,7 @@ sudo chmod a+x /opt/vdl/vdl.py
 sudo cp ./status.py /opt/vdl/status.py
 sudo chmod a+x /opt/vdl/status.py
 sudo cp ./init.d/vdl_status /etc/init.d/vdl_status
+sudo chmod a+x /etc/init.d/vdl_status
 
 echo "Starting VDL Server."
 {
