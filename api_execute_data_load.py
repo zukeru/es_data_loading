@@ -28,6 +28,7 @@ import logging.config
 from bottle import route, run
 from boto.cloudformation.stack import Output
 import json
+from es_data_loading.status import shell_command_execute
 
 
 # decompress a gzip string
@@ -81,52 +82,7 @@ def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, 
 
 #this is what is called to set up the loading process from the api.    
 def start_load(secret, access, protocol, host, ports, index, type, mapping, data,threads):
-    from elasticsearch import Elasticsearch
-    from elasticsearch.exceptions import RequestError
-    from subprocess import Popen, PIPE
-    from multiprocessing import Pool, Process
-    from datetime import datetime
-    import boto3
-    import sys
-    import os
-    import argparse
-    import logging
-    import logging.config
-    from bottle import route, run
-    from boto.cloudformation.stack import Output
-    import json
 
-    def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
-        try:
-            logging.info('loading s3://%s/%s', s3_bucket, s3_key)
-            s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
-            file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
-            file_contents = file_handle['Body'].read()
-            logging.info('%s'%s3_key)
-            if file_contents:
-                if s3_key.endswith('.gz'):
-                    file_contents = decompress_gzip(file_contents)
-                es = Elasticsearch(host=es_host, port=es_port, timeout=180)
-                es.bulk(body=file_contents, index=es_index, doc_type=es_type, timeout=120)
-        except Exception as e:
-            logging.error("There has been a major error %s" % e)
-            
-    def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
-        try:
-            logging.info('loading s3://%s/%s', s3_bucket, s3_key)
-            s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
-            file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
-            file_contents = file_handle['Body'].read()
-            logging.info('%s'%s3_key)
-            if file_contents:
-                if s3_key.endswith('.gz'):
-                    file_contents = decompress_gzip(file_contents)
-                es = Elasticsearch(host=es_host, port=es_port, timeout=180)
-                res = es.get(index="test-index", doc_type='tweet', id=1)
-                es.insert(body = file_contents, index = es_index, doc_type=es_type, timeout=120)
-        except Exception as e:
-            logging.error("There has been a major error %s" % e)
-    
     start = datetime.now()
     es_url = protocol + '://' + host + ':' + str(ports) + '/' + index + '/' + type
     es = Elasticsearch(host=host, port=ports, timeout=180)
@@ -175,48 +131,7 @@ def no_comands():
                 use = to seperate key value pairs
                 use | to insert \
                 """
-@route('/get_status/<name>')
-def get_status( name="Get Loading Status"):
-    values = name.split('&')
-    #split apart the url syntax items are split by & key values by = and any plcae that needs \ gets |
-    #set auto refrest split values
-    #+ ".us-west-2.elb.amazonaws.com"
-    try:
-        host = str(values[0]) 
-        port = str(values[1])
-        host = 'http://' + host + ':' + port
         
-        index = values[2] 
-        cat_es_thread_pool = 'curl ' + host + '/_cat/thread_pool'
-        build_html_newlines = ''
-        output = shell_command_execute(cat_es_thread_pool)
-        for line in output.split('\n'):
-            try:
-                values = line.split()
-                build_html_newlines = build_html_newlines + '<td align="right">' + values[0] + '</td>' + '<td align="right">' + values[1] + '</td>' + '<td align="right">' + values[2] + '</td>' + '<td align="right">' + values[3] + '</td>' + '<td align="right">' + values[4] + '</td></tr>'
-            except:
-                continue    
-        thread_pool_html = '<table><tr><td>instance</td><td>ip</td><td>thread pool active</td><td>thread pool queue</td><td>thread pool rejected</td></tr><tr>' + str(build_html_newlines) + '</table>'
-        stats = 'curl ' + str(host) + '/' + str(index) +'/_stats?pretty=true'
-        return_stats = shell_command_execute(stats)
-        ret_json = json.loads(return_stats)
-        index_rate_html = '<table><td>Indexing Rate:</td><td>' + str(ret_json['_all']['total']['indexing']['index_current']) + '</td></table></html>'
-        top_html = '<META HTTP-EQUIV="refresh" CONTENT="15"><html><title>VDL Status</title><body>'
-        logs = open(os.path.dirname(os.path.realpath(__file__)) + '/load-es.log')
-        log_contents = logs.read()
-        log_values = log_contents.split('\n')
-        log_html = ''
-        for line in log_values:
-            log_html += '<tr><td> ' + line + '</td></tr>'
-        
-        log_html = '<table>' + log_html + '</table>'
-        
-        file_html = top_html + thread_pool_html + index_rate_html + '<br><br>' + log_html
-        return file_html
-    except Exception as e:
-        return (""" Error getting status %s, %s """ % (e, host)) 
-                
-                
 @route('/load_data/<name>', method='GET')
 def commands( name="Execute Load" ):
 
@@ -249,12 +164,8 @@ def commands( name="Execute Load" ):
         secret = secret.split('=')[1]
 
         yield ("Starting Load of data use /get_status/es_url&es_port&index to get the status of your load.")
-        #start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
-        p = Process(target=start_load, args=(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads))
-        p.daemon = True
-        p.start()
-        p.join()
-        
+        start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
+    
     except Exception as e:
         logging.error(e)
         yield   """Please include all nessecary values: example: 
@@ -304,6 +215,11 @@ def recipe_delete( name="Delete Index" ):
         return "Failed to Deleted Index %s" % e
 
 if __name__ == '__main__':
+    command = 'sudo python ' + os.path.dirname(os.path.realpath(__file__)) + '/status.py'
+    try:
+        shell_command_execute(command)
+    except:
+        print 'error starting status updater'
     reload(sys)
     sys.setdefaultencoding('utf8')
     url = os.path.dirname(os.path.realpath(__file__)) + '/logging.ini'
