@@ -29,58 +29,72 @@ from bottle import route, run
 from boto.cloudformation.stack import Output
 import json
 
-# decompress a gzip string
-def decompress_gzip(data):
-    return Popen(['zcat'], stdout=PIPE, stdin=PIPE).communicate(input=data)[0]
-
-# parse an s3 path into a bucket and key 's3://my-bucket/path/to/data' -> ('my-bucket', 'path/to/data')
-
-def parse_s3_path(str):
-    _, _, bucket, key = str.split('/', 3)
-    return (bucket, key)
-
-def shell_command_execute(command):
-    p = Popen(command, stdout=PIPE, shell=True)
-    (output, err) = p.communicate()
-    return output
-
-# load an S3 file to elasticsearch
-
-def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
-    try:
-        logging.info('loading s3://%s/%s', s3_bucket, s3_key)
-        s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
-        file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
-        file_contents = file_handle['Body'].read()
-        logging.info('%s'%s3_key)
-        if file_contents:
-            if s3_key.endswith('.gz'):
-                file_contents = decompress_gzip(file_contents)
-            es = Elasticsearch(host=es_host, port=es_port, timeout=180)
-            es.bulk(body=file_contents, index=es_index, doc_type=es_type, timeout=120)
-    except Exception as e:
-        logging.error("There has been a major error %s" % e)
-
-# load an S3 file to elasticsearch
-def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
-    try:
-        logging.info('loading s3://%s/%s', s3_bucket, s3_key)
-        s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
-        file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
-        file_contents = file_handle['Body'].read()
-        logging.info('%s'%s3_key)
-        if file_contents:
-            if s3_key.endswith('.gz'):
-                file_contents = decompress_gzip(file_contents)
-            es = Elasticsearch(host=es_host, port=es_port, timeout=180)
-            res = es.get(index="test-index", doc_type='tweet', id=1)
-            es.insert(body = file_contents, index = es_index, doc_type=es_type, timeout=120)
-    except Exception as e:
-        logging.error("There has been a major error %s" % e)
-
 #this is what is called to set up the loading process from the api.    
 def start_load(secret, access, protocol, host, ports, index, type, mapping, data,threads):
+    from elasticsearch import Elasticsearch
+    from elasticsearch.exceptions import RequestError
+    from subprocess import Popen, PIPE
+    from multiprocessing import Pool, Process
+    from datetime import datetime
+    import boto3
+    import sys
+    import os
+    import argparse
+    import logging
+    import logging.config
+    from bottle import route, run
+    from boto.cloudformation.stack import Output
+    import json
 
+    # decompress a gzip string
+    def decompress_gzip(data):
+        return Popen(['zcat'], stdout=PIPE, stdin=PIPE).communicate(input=data)[0]
+    
+    # parse an s3 path into a bucket and key 's3://my-bucket/path/to/data' -> ('my-bucket', 'path/to/data')
+    
+    def parse_s3_path(str):
+        _, _, bucket, key = str.split('/', 3)
+        return (bucket, key)
+    
+    def shell_command_execute(command):
+        p = Popen(command, stdout=PIPE, shell=True)
+        (output, err) = p.communicate()
+        return output
+    
+    # load an S3 file to elasticsearch
+    
+    def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
+        try:
+            logging.info('loading s3://%s/%s', s3_bucket, s3_key)
+            s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
+            file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
+            file_contents = file_handle['Body'].read()
+            logging.info('%s'%s3_key)
+            if file_contents:
+                if s3_key.endswith('.gz'):
+                    file_contents = decompress_gzip(file_contents)
+                es = Elasticsearch(host=es_host, port=es_port, timeout=180)
+                es.bulk(body=file_contents, index=es_index, doc_type=es_type, timeout=120)
+        except Exception as e:
+            logging.error("There has been a major error %s" % e)
+    
+    # load an S3 file to elasticsearch
+    def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
+        try:
+            logging.info('loading s3://%s/%s', s3_bucket, s3_key)
+            s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
+            file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
+            file_contents = file_handle['Body'].read()
+            logging.info('%s'%s3_key)
+            if file_contents:
+                if s3_key.endswith('.gz'):
+                    file_contents = decompress_gzip(file_contents)
+                es = Elasticsearch(host=es_host, port=es_port, timeout=180)
+                res = es.get(index="test-index", doc_type='tweet', id=1)
+                es.insert(body = file_contents, index = es_index, doc_type=es_type, timeout=120)
+        except Exception as e:
+            logging.error("There has been a major error %s" % e)
+    
     start = datetime.now()
     es_url = protocol + '://' + host + ':' + str(ports) + '/' + index + '/' + type
     es = Elasticsearch(host=host, port=ports, timeout=180)
@@ -116,6 +130,7 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
     sys.exit(0)
     #reset_es_settings(host, ports)
 #This is what is called when no arguments are given
+
 @route('/load_data/')
 def no_comands():
     return """Please include all nessecary values: example: 
@@ -162,8 +177,12 @@ def commands( name="Execute Load" ):
         secret = secret.split('=')[1]
 
         yield ("Starting Load of data use /get_status/es_url&es_port&index to get the status of your load.")
-        start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
-    
+        #start_load(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads)
+        d = Process(name='daemon', target=start_load, args=(secret, access, protocol, host, ports, index, types, mapping_location, data_location,threads))
+        d.daemon = True
+        d.start()
+        d.join()    
+        
     except Exception as e:
         logging.error(e)
         yield   """Please include all nessecary values: example: 
@@ -181,6 +200,26 @@ def commands( name="Execute Load" ):
 #This is what is cvalled when /delete/ is used.
 @route('/delete/<name>', method='GET' )
 def recipe_delete( name="Delete Index" ):
+    from elasticsearch import Elasticsearch
+    from elasticsearch.exceptions import RequestError
+    from subprocess import Popen, PIPE
+    from multiprocessing import Pool, Process
+    from datetime import datetime
+    import boto3
+    import sys
+    import os
+    import argparse
+    import logging
+    import logging.config
+    from bottle import route, run
+    from boto.cloudformation.stack import Output
+    import json
+
+    def shell_command_execute(command):
+        p = Popen(command, stdout=PIPE, shell=True)
+        (output, err) = p.communicate()
+        return output
+        
     values = name.split('&')
     try:
         #split apart the url syntax items are split by & key values by |
