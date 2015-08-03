@@ -107,7 +107,6 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
         if file_summary.key.startswith(s3_key):
             pool.apply_async(load_s3_file, args=(s3_bucket, file_summary.key, host, ports, index, type, access, secret))
     
-    yield 'Your load has started please reference the status page.'
     pool.close()
     pool.join()
     
