@@ -36,6 +36,12 @@ def decompress_gzip(data):
 # parse an s3 path into a bucket and key 's3://my-bucket/path/to/data' -> ('my-bucket', 'path/to/data') 
 def parse_s3_path(str):
     _, _, bucket, key = str.split('/', 3)
+    bucket = str.split('/')[0]
+    in_length = len(str.split('/'))
+    build_string = ''
+    for index in range(1,5):
+        build_string += str.split('/')[index] + '/'
+    key = build_string
     return (bucket, key)
     
 def shell_command_execute(command):
@@ -60,24 +66,6 @@ def load_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access,
     except Exception as e:
         logging.error("There has been a major error %s" % e)
     
-# load an S3 file to elasticsearch
-def load_single_s3_file(s3_bucket, s3_key, es_host, es_port, es_index, es_type, access, secret):
-    try:
-        logging.info('loading s3://%s/%s', s3_bucket, s3_key)
-        s3 = boto3.client('s3',  aws_access_key_id=access, aws_secret_access_key=secret)
-        file_handle = s3.get_object(Bucket=s3_bucket, Key=s3_key)
-        file_contents = file_handle['Body'].read()
-        logging.info('%s'%s3_key)
-        if file_contents:
-            if s3_key.endswith('.gz'):
-                file_contents = decompress_gzip(file_contents)
-            es = Elasticsearch(host=es_host, port=es_port, timeout=180)
-            res = es.get(index="test-index", doc_type='tweet', id=1)
-            es.insert(body = file_contents, index = es_index, doc_type=es_type, timeout=120)
-    except Exception as e:
-        logging.error("There has been a major error %s" % e)
-
-
 #this is what is called to set up the loading process from the api.    
 def start_load(secret, access, protocol, host, ports, index, type, mapping, data,threads):
     start = datetime.now()
@@ -106,9 +94,10 @@ def start_load(secret, access, protocol, host, ports, index, type, mapping, data
     for file_summary in s3.Bucket(s3_bucket).objects.all():
         if file_summary.key.startswith(s3_key):
             pool.apply_async(load_s3_file, args=(s3_bucket, file_summary.key, host, ports, index, type, access, secret))
-    
     pool.close()
     pool.join()
+    
+    
     
     es.indices.put_settings({'index': {'refresh_interval': '1s'}}, index=index)
     logging.info('finished loading %s to %s in %s', data, es_url, str(datetime.now() - start))
@@ -137,7 +126,7 @@ def commands( name="Execute Load" ):
     #split apart the url syntax items are split by & key values by = and any plcae that needs \ gets |
     try:
         command = values[0]
-        host = values[1] + ".us-west-2.elb.amazonaws.com"
+        host = values[1]
         threads = values[2]
         mapping_location = values[3].replace('|', '/')
         data_location = values[4].replace('|', '/')
@@ -185,7 +174,7 @@ def recipe_delete( name="Delete Index" ):
     try:
         #split apart the url syntax items are split by & key values by |
         index = values[0]
-        host = values[1] + ".us-west-2.elb.amazonaws.com"
+        host = values[1]
         host = host.split('=')[1]
         port = values[2]
         port = port.split('=')[1]
